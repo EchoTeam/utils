@@ -14,6 +14,7 @@
     is_ascii/1,
     is_utf8/1,
     md5_str/1,
+    md5_uniq_str/0,
     subst/3,
     unhtmlize/1,
     utf8_split/2,
@@ -48,6 +49,9 @@ is_utf8(Str) ->
     end.
 
 md5_str(Data) -> hex(erlang:md5(Data)).
+
+md5_uniq_str() ->
+    crypto:md5(<<(crypto:rand_bytes(16))/bytes, (term_to_binary(make_ref()))/bytes>>).
 
 subst(String, Search, Replacement) ->
     LStr = string:len(String),

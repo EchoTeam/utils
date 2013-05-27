@@ -56,7 +56,7 @@ md5_uniq_str() ->
         _ -> crypto:rand_bytes(16)
     end,
     Bin = crypto:md5(<<Rnd/bytes, (term_to_binary(os:timestamp()))/bytes>>),
-    binary_to_list(Bin).
+    hex(Bin).
 
 subst(String, Search, Replacement) ->
     LStr = string:len(String),

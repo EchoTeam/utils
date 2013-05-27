@@ -53,7 +53,7 @@ md5_str(Data) -> hex(erlang:md5(Data)).
 md5_uniq_str() ->
     Rnd = try crypto:strong_rand_bytes(16) 
     catch
-        _ -> crypto:rand_bytes(16)
+        _:_ -> crypto:rand_bytes(16)
     end,
     Bin = crypto:md5(<<Rnd/bytes, (term_to_binary(os:timestamp()))/bytes>>),
     hex(Bin).

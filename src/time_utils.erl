@@ -15,7 +15,9 @@
     unixtime/0,
     unixtime/1,
     unixtime_float/0,
-    unixtime_float/1
+    unixtime_float/1,
+    make_until_timestamp/1,
+    calc_time_to_timestamp/1
 ]).
 
 iso8601_fmt(DateTime) ->
@@ -52,3 +54,15 @@ unixtime_float() -> unixtime_float(now()).
 %% @spec unixtime_float(now()) -> float()
 unixtime_float({M,S,U}) -> M*1000000 + S + U/1000000.
 
+%% @spec make_until_timestamp(integer()) -> now().
+make_until_timestamp(Timeout) ->
+    micro2now(now2micro(now()) + (Timeout * 1000)).
+
+%% @spec calc_time_to_timestamp(now()) -> integer().
+calc_time_to_timestamp(UntilTimestamp) ->
+    case timer:now_diff(UntilTimestamp, now()) of
+        UntilMicro when UntilMicro > 0 ->
+            UntilMicro div 1000;
+        _ ->
+            0
+    end.

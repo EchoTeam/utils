@@ -7,6 +7,7 @@
 -module(time_utils).
 
 -export([
+    date_of_ts/1,
     iso8601_fmt/1,
     iso8601_fmt/2,
     micro2now/1,
@@ -17,6 +18,13 @@
     unixtime_float/0,
     unixtime_float/1
 ]).
+
+date_of_ts({_,_,_} = Now) -> date_of_ts(time_utils:unixtime(Now));
+date_of_ts(TS) ->
+    DateTime = calendar:gregorian_seconds_to_datetime(62167219200+TS),
+    {{Year, Month, Day}, {Hour, Min, Sec}} = DateTime,
+    io_lib:format("~4..0B-~2..0B-~2..0B ~2B:~2.10.0B:~2.10.0B",
+        [Year, Month, Day, Hour, Min, Sec]).
 
 iso8601_fmt(DateTime) ->
     iso8601_fmt(DateTime, "Z").

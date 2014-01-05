@@ -3,7 +3,12 @@
 -export([diff/2,
          set_diff/1,
          get_diff/0,
-         cluster/1]).
+         cluster/1,
+         diff_one_to_many/2]).
+
+-export([pdiff/2,
+         pdiff_one_to_many/1,
+         pdiff_one_to_many/2]).
 
 -export([system_diff/2]).
 -export([erlang_diff/2]).
@@ -21,7 +26,7 @@ set_diff(Name) when Name =:= system; Name =:= erlang ->
 get_diff() ->
     case get('$use_diff') of
         undefined -> 
-            case application:get_env(diff, use_diff) of
+            case application:get_env(utils, use_diff) of
                 undefined -> erlang;
                 Value -> Value
             end;
@@ -34,20 +39,16 @@ diff(Term1, Term2) ->
         system -> system_diff(Term1, Term2)
     end.
 
-system_diff(Term1, Term2) ->
-    Sorted1 = sort_everything(Term1),
-    Sorted2 = sort_everything(Term2),
-    OutputFile1 = tmpfile(),
-    OutputFile2 = tmpfile(),
-    file:write_file(OutputFile1, io_lib:fwrite("~p\n", [Sorted1])),
-    file:write_file(OutputFile2, io_lib:fwrite("~p\n", [Sorted2])),
-    os:cmd("diff " ++ OutputFile1 ++ " " ++ OutputFile2).
+pdiff(Diff) ->
+    case get_diff() of
+        erlang -> io:format("~p~n", [Diff]);
+        system -> io:format("~s~n", [Diff])
+    end.
+
+pdiff(Term1, Term2) ->
+    pdiff(diff(Term1, Term2)).
 
 
-erlang_diff(Term1, Term2) ->
-    Sorted1 = sort_everything(Term1),
-    Sorted2 = sort_everything(Term2),
-    erlang_diff_ll(Sorted1, Sorted2).
 
 -type cluster_tag() :: term().
 -type cluster_value() :: term().
@@ -62,6 +63,54 @@ cluster(Pairs) when is_list(Pairs) ->
             ({Value, Key}, Tail) ->
                 [{[Key], Value} | Tail]
         end, [], SPairs).
+
+diff_one_to_many(One, Many) when is_list(Many) ->
+    ClusteredMany = cluster(Many),
+    [{Keys, diff(One, Value)} || {Keys, Value} <- ClusteredMany].
+
+pdiff_one_to_many(One, Many) ->
+    io:format("Origin:~n~p~n", [One]),
+    io:format("===============================~n"),
+    Diffs = diff_one_to_many(One, Many),
+    pdiff_one_to_many(Diffs).
+
+pdiff_one_to_many(Diffs) ->
+    ClusterCount = length(Diffs),
+    SortDiffs = lists:sort(fun 
+                ({Fst, _}, {Snd, _}) ->
+                    length(Fst) > length(Snd)
+            end, Diffs),
+    lists:zipwith(fun
+            ({Keys, Diff}, Number) ->
+                io:format("~nGroup ~B: ~p~n"
+                          "Diff:~n", [Number, Keys]),
+                          
+                pdiff(Diff),
+                io:format("===============================~n")
+        end, SortDiffs, lists:seq(1, ClusterCount)),
+    ok.
+                
+
+%%
+%% Various diffs
+%%
+system_diff(Term1, Term2) ->
+    Sorted1 = sort_everything(Term1),
+    Sorted2 = sort_everything(Term2),
+    OutputFile1 = tmpfile(),
+    OutputFile2 = tmpfile(),
+    file:write_file(OutputFile1, io_lib:fwrite("~p\n", [Sorted1])),
+    file:write_file(OutputFile2, io_lib:fwrite("~p\n", [Sorted2])),
+    os:cmd("diff " ++ OutputFile1 ++ " " ++ OutputFile2).
+
+
+erlang_diff(Term1, Term2) ->
+    Sorted1 = sort_everything(Term1),
+    Sorted2 = sort_everything(Term2),
+    case Sorted1 of
+        Sorted2 -> '$same';
+        _ -> erlang_diff_ll(Sorted1, Sorted2)
+    end.
 
 
 %%
@@ -223,5 +272,4 @@ close_ratio(Item) ->
 
 bool_to_int(true) -> 1;
 bool_to_int(_Any) -> 0.
-
 

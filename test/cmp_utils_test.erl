@@ -11,9 +11,9 @@
 d(One, Two) -> erlang_diff(One, Two).
 
 erlang_diff_test_() ->
-    [?_assertMatch(a, d(a, a)),
+    [?_assertMatch('$same', d(a, a)),
      ?_assertMatch({'$changed', a, b}, d(a, b)),
-     ?_assertMatch([a], d([a], [a])),
+     ?_assertMatch('$same', d([a], [a])),
      ?_assertMatch([{'$add', a}], d([1, b, c, d], [1, b, c, a, d])),
      ?_assertMatch([{'$add', {a, 1}}], d([{b, 1}], [{a, 1}, {b, 1}])),
      ?_assertMatch([{'$add', {a, 1}}], 

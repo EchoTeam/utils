@@ -119,9 +119,14 @@ erlang_diff(Term1, Term2) ->
 
 erlang_diff_ll(Same, Same) ->
     Len = lists:flatlength(io_lib:fwrite("~p", [Same])),
+    IsPrintable = is_list(Same) andalso io_lib:printable_list(Same),
     if
-        Len < 16 -> Same;
-        true -> '$same'
+        is_atom(Same)  -> Same;
+        is_integer(Same) -> Same;
+        is_float(Same) -> Same;
+        IsPrintable    -> Same;
+        Len < 80       -> Same;
+        true           -> '$same'
     end;
 erlang_diff_ll(List1, List2) 
         when is_list(List1), is_list(List2) ->
@@ -134,19 +139,41 @@ erlang_diff_ll(List1, List2)
     end;
 erlang_diff_ll(Tuple1, Tuple2)
         when is_tuple(Tuple1), is_tuple(Tuple2) ->
-    diff_tuple(tuple_to_list(Tuple1), tuple_to_list(Tuple2), []);
+    diff_tuple(Tuple1, Tuple2);
 erlang_diff_ll(One, Two) ->
     {'$changed', One, Two}.
 
 
-diff_list(One, One, Acc) ->
+% Since diff_list is invoked from erlang_diff_ll,
+% we could guarantee that there is no such element
+% that exists in both arguments
+diff_list(One, One, Acc) -> % here One is expected to be []
     lists:reverse(Acc);
-diff_list([H1 | T1], [H1 | T2], Acc) ->
-    diff_list(T1, T2, Acc);
 diff_list([H1 | T1], [], Acc) ->
     diff_list(T1, [], [{'$rm', H1} | Acc]);
 diff_list([], [H2 | T2], Acc) ->
     diff_list([], T2, [{'$add', H2} | Acc]);
+diff_list([H1 | T1], [H2 | T2], Acc)
+        when is_atom(H1), is_atom(H2);
+             is_integer(H1), is_integer(H2);
+             is_binary(H1), is_binary(H2);
+             is_float(H1), is_integer(H2);
+             is_float(H2), is_integer(H1);
+             is_float(H1), is_float(H2)
+        ->
+    {D1, Tt2} = case without(H1, T2) of
+        false -> {[{'$rm', H1}], T2};
+        List2 -> {[], List2}
+    end,
+    {D2, Tt1} = case without(H2, T1) of
+        false -> {[{'$add', H2}], T1};
+        List1 -> {[], List1}
+    end,
+    diff_list(Tt1, Tt2, D2 ++ D1 ++ Acc);
+diff_list([H1 | T1], [H2 | T2], Acc) 
+        when is_list(H1), is_list(H2) ->
+    NewAcc = [erlang_diff_ll(H1, H2) | Acc],
+    diff_list(T1, T2, NewAcc);
 diff_list([H1 | T1] = L1, [H2 | T2] = L2, Acc) 
         when is_tuple(H1), is_tuple(H2) ->
     CompanionTo1 = take_closest_tuple(H1, L2),
@@ -167,33 +194,11 @@ diff_list([H1 | T1] = L1, [H2 | T2] = L2, Acc)
             diff_list(T1, T2, NewAcc);
         {{value, C1, Tt2}, false} ->
             NewAcc = [{'$add', H2} | diff_tuple_in_list(H1, C1)] ++ Acc,
-            io:format("T1 = ~p, Tt2 = ~p~n", [T1, Tt2]),
             diff_list(T1, without(H2, Tt2), NewAcc);
         {false, {value, C2, Tt1}} ->
             NewAcc = diff_tuple_in_list(C2, H2) ++ [{'$rm', H1} | Acc],
             diff_list(without(H1, Tt1), T2, NewAcc)
     end;
-diff_list([H1 | T1], [H2 | T2], Acc) 
-        when is_list(H1), is_list(H2) ->
-    NewAcc = [erlang_diff_ll(H1, H2) | Acc],
-    diff_list(T1, T2, NewAcc);
-diff_list([H1 | T1], [H2 | T2], Acc)
-        when is_atom(H1), is_atom(H2);
-             is_integer(H1), is_integer(H2);
-             is_binary(H1), is_binary(H2);
-             is_float(H1), is_integer(H2);
-             is_float(H2), is_integer(H1);
-             is_float(H1), is_float(H2)
-        ->
-    {D1, Tt2} = case without(H1, T2) of
-        false -> {[{'$rm', H1}], T2};
-        List2 -> {[], List2}
-    end,
-    {D2, Tt1} = case without(H2, T1) of
-        false -> {[{'$add', H2}], T1};
-        List1 -> {[], List1}
-    end,
-    diff_list(Tt1, Tt2, D2 ++ D1 ++ Acc);
 %
 % integer < atom < tuple < list < binary
 diff_list([H1 | T1], [H2 | _ ] = L2, Acc)
@@ -205,6 +210,9 @@ diff_list([H1 | _] = L1, [H2 | T2], Acc)
     NewAcc = [{'$add', H2} | Acc],
     diff_list(L1, T2, NewAcc).
 
+
+diff_tuple(One, Two) ->
+    diff_tuple(tuple_to_list(One), tuple_to_list(Two), []).
 
 diff_tuple(One, One, Acc) ->
     list_to_tuple(lists:reverse(Acc) ++ One);
@@ -229,7 +237,7 @@ sort_everything(List) when is_list(List) ->
     end;
 sort_everything(Tuple) when is_tuple(Tuple) -> 
     TupleList = tuple_to_list(Tuple),
-    TupleSorted = lists:map(fun(E) -> sort_everything(E) end, TupleList),
+    TupleSorted = lists:map(fun sort_everything/1, TupleList),
     list_to_tuple(TupleSorted);
 sort_everything(Term) -> 
     Term.
@@ -243,32 +251,36 @@ without(_Item, [], _) -> false;
 without(Item, [Item|Tail], Acc) -> lists:reverse(Acc) ++ Tail;
 without(Item, [Head|Tail], Acc) -> without(Item, Tail, [Head | Acc]).
 
-take_closest_tuple(Item, List) ->
-    Closest = lists:sort(lists:map(close_ratio(Item), List)),
+
+-define(head_weight, 5).
+-define(closest_treshold, 5).
+
+take_closest_tuple(OriginItem, List) ->
+    Closest = lists:sort([close_ratio(OriginItem, Item) || Item <- List]),
     case Closest of
-        [{Ratio, ListItem} | _] when Ratio < -4 ->
+        [{Ratio, ListItem} | _] when Ratio =< -?closest_treshold ->
             {value, ListItem, without(ListItem, List)};
         _ ->
             false
     end.
 
-close_ratio(Item) ->
+close_ratio(Item, ListItem) ->
     [H1 | T1] = tuple_to_list(Item),
-    fun (ListItem) ->
-            [H2 | T2] = tuple_to_list(ListItem),
-            S1 = length(T1),
-            S2 = length(T2),
-            SMin = erlang:min(S1, S2),
-            SizeMatch = bool_to_int(S1 == S2),
-            Head = 5 * bool_to_int(H1 == H2),
-            Tail = lists:sum(lists:zipwith(fun
-                            (Same, Same) -> 1;
-                            (_, _) -> 0
-                        end, 
-                        lists:sublist(T1, 1, SMin),
-                        lists:sublist(T2, 1, SMin))),
-            {-(SizeMatch + Head + Tail), ListItem}
-    end.
+    [H2 | T2] = tuple_to_list(ListItem),
+    S1 = length(T1),
+    S2 = length(T2),
+    SMin = erlang:min(S1, S2),
+    SizeMatch = bool_to_int(S1 == S2),
+    Head = ?head_weight * bool_to_int(H1 == H2),
+    Tail = lists:sum(lists:zipwith(
+                fun
+                    (Same, Same) -> 1;
+                    (_, _) -> 0
+                end, 
+                lists:sublist(T1, 1, SMin),
+                lists:sublist(T2, 1, SMin))),
+    Ratio = SizeMatch + Head + Tail,
+    {-Ratio, ListItem}.
 
 bool_to_int(true) -> 1;
 bool_to_int(_Any) -> 0.

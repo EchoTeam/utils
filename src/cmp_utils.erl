@@ -253,12 +253,12 @@ without(Item, [Head|Tail], Acc) -> without(Item, Tail, [Head | Acc]).
 
 
 -define(head_weight, 5).
--define(closest_treshold, 5).
+-define(closest_threshold, 5).
 
 take_closest_tuple(OriginItem, List) ->
     Closest = lists:sort([close_ratio(OriginItem, Item) || Item <- List]),
     case Closest of
-        [{Ratio, ListItem} | _] when Ratio =< -?closest_treshold ->
+        [{Ratio, ListItem} | _] when Ratio =< -?closest_threshold ->
             {value, ListItem, without(ListItem, List)};
         _ ->
             false

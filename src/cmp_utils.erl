@@ -222,7 +222,7 @@ diff_tuple([H1 | T1], [H2 | T2], Acc) ->
 diff_tuple([], [H2 | T2], Acc) ->
     diff_tuple([], T2, [{'$add', H2} | Acc]);
 diff_tuple([H1 | T1], [], Acc) ->
-    diff_tuple(T1, [], [{'$remove', H1} | Acc]).
+    diff_tuple(T1, [], [{'$rm', H1} | Acc]).
 
 diff_tuple_in_list(T, T) ->
     [];

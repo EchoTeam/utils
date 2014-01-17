@@ -1,4 +1,4 @@
--module(cmp_utils_test).
+-module(cmp_utils_tests).
 
 -include_lib("eunit/include/eunit.hrl").
 

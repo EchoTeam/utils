@@ -7,6 +7,7 @@
 -module(time_utils).
 
 -export([
+    ago_of_ts/1,
     date_of_ts/1,
     iso8601_fmt/1,
     iso8601_fmt/2,
@@ -25,6 +26,35 @@ date_of_ts(TS) ->
     {{Year, Month, Day}, {Hour, Min, Sec}} = DateTime,
     io_lib:format("~4..0B-~2..0B-~2..0B ~2B:~2.10.0B:~2.10.0B",
         [Year, Month, Day, Hour, Min, Sec]).
+
+ago_of_ts({_,_,_} = Now) ->
+    ago_of_ts(unixtime(Now));
+ago_of_ts(TS) ->
+    Diff = unixtime() - TS,
+    Formats = [
+        {60, "seconds", 1},
+        {90, "1 minute"},
+        {3600, "minutes", 60},
+        {5400, "1 hour"},
+        {86400, "hours", 3600},
+        {129600, "1 day"},
+        {604800, "days", 86400},
+        {907200, "1 week"},
+        {2628000, "weeks", 604800},
+        {3942000, "1 month"},
+        {31536000, "months", 2628000},
+        {47304000, "1 year"},
+        {3153600000, "years", 31536000}
+    ],
+    lists:foldl(fun(F, Acc) ->
+        case Diff < element(1, F) of
+            true -> (case tuple_size(F) of
+                2 -> element(2, F);
+                3 -> integer_to_list(erlang:round(Diff/element(3, F)))
+                                        ++ " " ++ element(2, F) end) ++ " ago";
+            false -> Acc
+        end
+    end, "Just now", lists:reverse(Formats)).
 
 iso8601_fmt(DateTime) ->
     iso8601_fmt(DateTime, "Z").

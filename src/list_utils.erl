@@ -7,6 +7,7 @@
 -module(list_utils).
 
 -export([
+    chunk_by/2,
     first_ne/2,
     empty/1,
     group/1,
@@ -65,3 +66,12 @@ stable_unique_list(List) ->
 
 unique_list(List) ->
     ordsets:to_list(ordsets:from_list(List)).
+
+% Cut potentially long list into chunks of size N.
+chunk_by(N, List) when N > 0 ->
+    try lists:split(N, List) of
+        {FirstN, Rest} -> [FirstN | chunk_by(N, Rest)]
+    catch
+        error:badarg when List /= [] -> [List];
+        error:badarg -> []
+    end.

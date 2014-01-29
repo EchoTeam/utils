@@ -1,8 +1,6 @@
-{application, utils,
- [
-  {description, "Echo Utilities"},
-  {vsn, "0.1.0"},
-  {registered, []},
-  {applications, [kernel, stdlib]},
-  {env, []}
- ]}.
+{application,utils,
+             [{description,"Echo Utilities"},
+              {vsn,"0.1.1"},
+              {registered,[]},
+              {applications,[kernel,stdlib]},
+              {env,[]}]}.

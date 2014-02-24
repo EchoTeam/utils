@@ -1,6 +1,6 @@
-%%%
-%%% Copyright (c) 2013 JackNyfe. All rights reserved.
-%%% THIS SOFTWARE IS PROPRIETARY AND CONFIDENTIAL. DO NOT REDISTRIBUTE.
+%%% 
+%%% Copyright (c) 2008-2014 JackNyfe, Inc. <info@jacknyfe.com>
+%%% All rights reserved.
 %%%
 %%% vim: set ts=4 sts=4 sw=4 et:
 

@@ -1,3 +1,7 @@
+%%% 
+%%% Copyright (c) 2008-2014 JackNyfe, Inc. <info@jacknyfe.com>
+%%% All rights reserved.
+%%%
 -module(error_monad).
 -export([
   break/1,

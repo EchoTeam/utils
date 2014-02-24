@@ -1,6 +1,7 @@
 %%% 
-%%% Copyright (c) 2007 JackNyfe. All rights reserved.
-%%% THIS SOFTWARE IS PROPRIETARY AND CONFIDENTIAL. DO NOT REDISTRIBUTE.
+%%% Copyright (c) 2008-2014 JackNyfe, Inc. <info@jacknyfe.com>
+%%% All rights reserved.
+%%%
 %%%
 %%% When YAWS invokes the out() function of a particular .yaws script, such
 %%% .yaws script expects some resources (user UPREFS, domain prefs, etc)

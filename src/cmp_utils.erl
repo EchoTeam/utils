@@ -1,7 +1,3 @@
-%%% 
-%%% Copyright (c) 2008-2014 JackNyfe, Inc. <info@jacknyfe.com>
-%%% All rights reserved.
-%%%
 -module(cmp_utils).
 
 -export([diff/2,
